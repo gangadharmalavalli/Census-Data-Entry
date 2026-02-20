@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Census 2027 – Malavalli</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Noto+Serif:wght@600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Mukta',sans-serif;background:#eef2f7}
+.hdr{background:linear-gradient(90deg,#1b3d6e,#0f2548);border-bottom:3px solid #c9a227;color:white;padding:14px}
+.main{max-width:1200px;margin:0 auto;padding:20px}
+.login-card,.panel,.tbl-wrap{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1);padding:20px;margin-bottom:15px}
+button{padding:7px 14px;background:#1b3d6e;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer}
+button:hover{background:#0d4a8c}
+input,select{padding:8px;border:1px solid #ccc;border-radius:6px;width:100%}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:#1b3d6e;color:#fff;padding:8px;font-size:12px}
+.tbl td{padding:8px;border-bottom:1px solid #eee;font-size:13px}
+.sno-b{background:#e2e8f0;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px}
+.ni{width:100px;text-align:right}
+.sync{font-size:16px}
+</style>
+</head>
+
+<body>
+
+<div class="hdr">
+<h2>Census 2027 — Village Population Data Entry</h2>
+Malavalli Taluk · Mandya District
+</div>
+
+<div class="main">
+
+<div id="loginBox" class="login-card">
+<h3>Login</h3>
+
+<select id="role">
+<option value="vao">VAO</option>
+<option value="secretary">GP Secretary</option>
+</select><br><br>
+
+<select id="nameSelect"></select><br><br>
+
+<input type="password" id="password" placeholder="Enter Password"><br><br>
+
+<button onclick="login()">Login</button>
+<p id="loginError" style="color:red"></p>
+</div>
+
+<div id="appBox" style="display:none">
+
+<div class="panel">
+<b id="userLabel"></b>
+<button onclick="logout()" style="float:right;background:#dc2626">Logout</button>
+</div>
+
+<div class="panel">
+<label><b>Paste Google Apps Script Web App URL (ends with /exec)</b></label><br>
+<input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/AKfycbXXXX/exec">
+</div>
+
+<div class="tbl-wrap">
+<table class="tbl">
+<thead>
+<tr>
+<th>#</th>
+<th>Code</th>
+<th>Village</th>
+<th>Population</th>
+<th>Households</th>
+<th>Save</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+
+</div>
+</div>
+
+<script>
+
+const PASSWORD="Mal@1234";
+
+/* ===== FULL 202 VILLAGES ===== */
+const RAW_VILLAGES = [
+{code:614654,name:"Chikkamulagudu",vao:"SHAFI",gp:"Chikkamulagudu"},
+{code:649474,name:"Kurubanapura",vao:"SHAFI",gp:"Chikkamulagudu"},
+{code:614655,name:"Veerajipura",vao:"MANJUNATH M V",gp:"Mikkere"},
+{code:614656,name:"Maganahalli",vao:"KAVYA",gp:"Mikkere"},
+{code:614657,name:"Mikkere",vao:"MANJUNATH M V",gp:"Mikkere"},{ sno:6,code:614658,name:"Ramandur",dakale:"Chunchagowdanakoppalu",vao:"MANJUNATH M V",gp:"Mikkere"}, { sno:7,code:614659,name:"Anasale",dakale:"Ramanathamole",vao:"SHAFI",gp:"Chikkamulagudu"}, { sno:8,code:649529,name:"Halladakoppalu",dakale:"",vao:"SHAFI",gp:"Chikkamulagudu"}, { sno:9,code:614660,name:"Bheemanahalli",dakale:"",vao:"GURURAJ",gp:"Chikkamulagudu"}, { sno:10,code:614661,name:"Hittanahalli",dakale:"1)Hittanahalli Koppalu 2)Budukegowdanadoddi",vao:"GURURAJ",gp:"Hittanahalli"}, { sno:11,code:614662,name:"Dugganahalli",dakale:"1)Hanchipura 2)Muddegowdanadoddi",vao:"KAVADI DHANANJAYA",gp:"Dugganahalli"}, { sno:12,code:614663,name:"Devipura",dakale:"Jayachamarajapura",vao:"PRAKASHA",gp:"Talagavadi"}, { sno:13,code:614664,name:"Thalagavadi",dakale:"",vao:"PRAKASHA",gp:"Talagavadi"}, { sno:14,code:614665,name:"Kagepura",dakale:"",vao:"PRAKASHA",gp:"Talagavadi"}, { sno:15,code:614666,name:"Koregala",dakale:"",vao:"AKSHAY KUMAR",gp:"Settihalli"}, { sno:16,code:614667,name:"Maganur",dakale:"Maganuru Kaloni",vao:"AKSHAY KUMAR",gp:"Settihalli"}, { sno:17,code:614668,name:"Settahalli",dakale:"",vao:"AKSHAY KUMAR",gp:"Settihalli"}, { sno:18,code:614669,name:"Muganakoppalu",dakale:"",vao:"HANAMANTARAYA BOGONDI",gp:"Lingapatna"}, { sno:19,code:614670,name:"Ganiganapura",dakale:"",vao:"JAYANTH B N",gp:"Bandur"}, { sno:20,code:614671,name:"Sasiyalapura",dakale:"Gattikoppalu",vao:"JAYANTH B N",gp:"Bandur"}, { sno:21,code:614672,name:"Madahalli",dakale:"",vao:"KAVADI DHANANJAYA",gp:"Dugganahalli"}, { sno:22,code:614673,name:"Hullegala",dakale:"",vao:"KAVADI DHANANJAYA",gp:"Dugganahalli"}, { sno:23,code:614674,name:"Bandurukaval",dakale:"",vao:"AKSHAY KUMAR",gp:"Settihalli"}, { sno:24,code:614675,name:"Banduru",dakale:"Dadadapura",vao:"JAYANTH B N",gp:"Bandur"}, { sno:25,code:614676,name:"Kallarepura",dakale:"",vao:"HANAMANTARAYA BOGONDI",gp:"Bandur"}, { sno:26,code:614677,name:"Nenanuru",dakale:"",vao:"PRATHIMA SM",gp:"Sujjalur"}, { sno:27,code:614678,name:"Markalu",dakale:"1)Kodenakoppalu 2)Aladahalli",vao:"PRATHIMA SM",gp:"Hittanahalli"}, { sno:28,code:651553,name:"Jadaganapura",dakale:"",vao:"PRATHIMA SM",gp:"Hittanahalli"}, { sno:29,code:614679,name:"Doranahalli",dakale:"",vao:"GURURAJ",gp:"Mikkere"}, { sno:30,code:614680,name:"Kirugavalu",dakale:"Chikkegowdanadoddi",vao:"SHAFI",gp:"Kirugavalu"}, { sno:31,code:614681,name:"Deshavalli",dakale:"",vao:"KAVYA",gp:"Bendaravadi"}, { sno:32,code:614682,name:"Bendaravadi",dakale:"",vao:"KAVYA",gp:"Bendaravadi"}, { sno:33,code:614683,name:"Honaganahalli",dakale:"",vao:"ANIL JAMAKHANDI",gp:"Kalkuni"}, { sno:34,code:614684,name:"Kalkuni",dakale:"1)Puttegowdanakoppalu 2)Chikkamaligekoppalu",vao:"ANIL JAMAKHANDI",gp:"Kalkuni"}, { sno:35,code:651353,name:"Doddegowdanakoppalu",dakale:"",vao:"ANIL JAMAKHANDI",gp:"Kalkuni"}, { sno:36,code:614685,name:"Huvinakoppalu",dakale:"",vao:"ANIL JAMAKHANDI",gp:"Sujjalur"}, { sno:37,code:614686,name:"Sujjalur",dakale:"1)Channapillekoppalu 2)Nanjegowdanadoddi",vao:"ANIL JAMAKHANDI",gp:"Sujjalur"}, { sno:38,code:651447,name:"Samshettipura",dakale:"",vao:"ANIL JAMAKHANDI",gp:"Sujjalur"}, { sno:39,code:614687,name:"Uppanahalli",dakale:"",vao:"HANAMANTARAYA BOGONDI",gp:"Settihalli"}, { sno:40,code:614688,name:"Yamadurukaval",dakale:"",vao:"HANAMANTARAYA BOGONDI",gp:"Ragibommanahalli"}, { sno:41,code:614689,name:"Yamaduru",dakale:"",vao:"HANAMANTARAYA BOGONDI",gp:"Ragibommanahalli"}, { sno:42,code:614690,name:"Ragibommanahalli",dakale:"Hucchanadoddi",vao:"HANAMANTARAYA BOGONDI",gp:"Ragibommanahalli"}, { sno:43,code:614691,name:"Ganaganuru",dakale:"",vao:"PUNEETH KUMAR N",gp:"Ragibommanahalli"}, { sno:44,code:614692,name:"Hangrapura",dakale:"",vao:"PUNEETH KUMAR N",gp:"Ragibommanahalli"}, { sno:45,code:614693,name:"Avverahalli",dakale:"Vadakepura",vao:"PUNEETH KUMAR N",gp:"Ragibommanahalli"}, { sno:46,code:614694,name:"Kebbepura",dakale:"",vao:"PUNEETH KUMAR N",gp:"Sujjalur"}, { sno:47,code:614695,name:"Maliyur",dakale:"Uppagerikoppalu",vao:"PUNEETH KUMAR N",gp:"Sujjalur"}, { sno:48,code:651355,name:"Nelligere",dakale:"",vao:"PUNEETH KUMAR N",gp:"Sujjalur"}, { sno:49,code:614696,name:"Hanakola",dakale:"",vao:"PUNEETH KUMAR N",gp:"Sujjalur"}, { sno:50,code:614697,name:"Basavana Halli",dakale:"",vao:"PUNEETH KUMAR N",gp:"Purigali"}, { sno:51,code:614698,name:"Surakahalli",dakale:"",vao:"PUNEETH KUMAR N",gp:"Purigali"}, { sno:52,code:614699,name:"Nelamakanahalli",dakale:"",vao:"CHAITHRA K",gp:"Nelamakanahalli"}, { sno:53,code:654905,name:"Hombegowdanadoddi",dakale:"",vao:"CHAITHRA K",gp:"Nelamakanahalli"}, { sno:54,code:654906,name:"Bhugathagahalli",dakale:"",vao:"CHAITHRA K",gp:"Nelamakanahalli"}, { sno:55,code:614700,name:"Appugowdana Halli",dakale:"Kalakempanadoddi",vao:"CHAITHRA K",gp:"Nelamakanahalli"}, { sno:56,code:651356,name:"Nelluru",dakale:"",vao:"CHAITHRA K",gp:"Nelamakanahalli"}, { sno:57,code:614701,name:"Kaluveeranahalli",dakale:"Moledoddi",vao:"USMAN BHASHA",gp:"Kandegala"}, { sno:58,code:614702,name:"Kandegala",dakale:"",vao:"USMAN BHASHA",gp:"Kandegala"}, { sno:59,code:614703,name:"Gulagatta",dakale:"",vao:"USMAN BHASHA",gp:"Nelamakanahalli"}, { sno:60,code:614704,name:"Malavalli(Rural)",dakale:"Tammadahalli",vao:"NANDEESH",gp:"Marehalli"}, { sno:61,code:614705,name:"Nidaghatta",dakale:"Kyathegowdanadoddi",vao:"MADEVI J",gp:"Nidaghatta"}, { sno:62,code:651360,name:"Cholanahalli",dakale:"",vao:"MADEVI J",gp:"Nidaghatta"}, { sno:63,code:614706,name:"Ankanahalli",dakale:"Anchedoddi",vao:"NATARAJ B",gp:"Kandegala"}, { sno:64,code:614707,name:"Gowdagere",dakale:"",vao:"SIDRAMAPPA",gp:"Nidaghatta"}, { sno:65,code:614708,name:"Amrutheswaranahalli",dakale:"",vao:"SIDRAMAPPA",gp:"Kandegala"}, { sno:66,code:614709,name:"Kembuthagere",dakale:"K. Annahalli",vao:"SIDRAMAPPA",gp:"Agasnapura"}, { sno:67,code:614710,name:"Sahalli",dakale:"",vao:"SIDRAMAPPA",gp:"Agasnapura"}, { sno:68,code:614711,name:"Hadli",dakale:"",vao:"RAVEESH M",gp:"Haadli"}, { sno:69,code:614712,name:"Kodipura",dakale:"",vao:"RAVEESH M",gp:"Agasnapura"}, { sno:70,code:614713,name:"Koonanapura",dakale:"",vao:"RAVEESH M",gp:"Haadli"}, { sno:71,code:614714,name:"Jogipura",dakale:"",vao:"SHIVAPPA DAMANALA",gp:"Agasnapura"}, { sno:72,code:614715,name:"Agasanapura",dakale:"",vao:"SHIVAPPA DAMANALA",gp:"Agasnapura"}, { sno:73,code:614716,name:"Banagahalli",dakale:"",vao:"SHIVASHANKAR B JAMAKANDI",gp:"Huskur"}, { sno:74,code:614717,name:"Chandupura",dakale:"",vao:"SHIVASHANKAR B JAMAKANDI",gp:"Huskur"}, { sno:75,code:614718,name:"M.Shivapura",dakale:"",vao:"ABHIJITH N L",gp:"Yathambadi"}, { sno:76,code:614719,name:"Huskur",dakale:"1)Hucchegowdanadoddi 2)Appajayanadoddi 3)Kulumedoddi 4)Siddapura",vao:"SHIVASHANKAR B JAMAKANDI",gp:"Huskur"}, { sno:77,code:614720,name:"Kaladevanahalli",dakale:"",vao:"KENCHAPPA KODLIWWAD",gp:"Yathambadi"}, { sno:78,code:614721,name:"Hosapura",dakale:"Gollaradoddi",vao:"ABHIJITH N L",gp:"Yathambadi"}, { sno:79,code:614722,name:"Aslishivapura",dakale:"",vao:"ABHIJITH N L",gp:"Yathambadi"}, { sno:80,code:614723,name:"Belathur",dakale:"",vao:"ABHIJITH N L",gp:"Yathambadi"}, { sno:81,code:614724,name:"Yethambadi",dakale:"",vao:"ABHIJITH N L",gp:"Yathambadi"}, { sno:82,code:614725,name:"Antharavalli",dakale:"",vao:"KENCHAPPA KODLIWWAD",gp:"Yathambadi"}, { sno:83,code:614726,name:"Hullahalli",dakale:"",vao:"SHIVASHANKAR B JAMAKANDI",gp:"Yathambadi"}, { sno:84,code:614727,name:"Channipura",dakale:"",vao:"RAVEESH M",gp:"D.Halasahalli"}, { sno:85,code:614728,name:"Hullagala",dakale:"",vao:"SHIVASHANKAR B JAMAKANDI",gp:"Huskur"}, { sno:86,code:614729,name:"Dadamahalli",dakale:"",vao:"KENCHAPPA KODLIWWAD",gp:"Yathambadi"}, { sno:87,code:614730,name:"Kiragasur",dakale:"",vao:"KENCHAPPA KODLIWWAD",gp:"Yathambadi"}, { sno:88,code:614731,name:"Banasamudra",dakale:"",vao:"BHASKAR S",gp:"D.Halasahalli"}, { sno:89,code:614732,name:"Kaggalipura",dakale:"",vao:"BHASKAR S",gp:"D.Halasahalli"}, { sno:90,code:614733,name:"Konnapura",dakale:"",vao:"BHASKAR S",gp:"D.Halasahalli"}, { sno:91,code:614734,name:"Halasahalli",dakale:"",vao:"BHASKAR S",gp:"D.Halasahalli"}, { sno:92,code:614735,name:"Dhanagur",dakale:"",vao:"SHIVAPPA DAMANALA",gp:"Dhanaguru"}, { sno:93,code:614736,name:"Linganapura",dakale:"",vao:"SUDARSHAN KUMAR PS",gp:"Haadli"}, { sno:94,code:614737,name:"Gramadevathepura",dakale:"",vao:"SUDARSHAN KUMAR PS",gp:"Dhanaguru"}, { sno:95,code:614738,name:"Basavanpura",dakale:"",vao:"RAVEESH M",gp:"D.Halasahalli"}, { sno:96,code:614739,name:"Nadakalapura",dakale:"Nanjegowdanadoddi",vao:"SUDARSHAN KUMAR PS",gp:"Haadli"}, { sno:97,code:614740,name:"Megalapura",dakale:"",vao:"PRAVEEN KUMAR M",gp:"Haadli"}, { sno:98,code:614741,name:"Kamsagara",dakale:"",vao:"PRAVEEN KUMAR M",gp:"Haadli"}, { sno:99,code:614742,name:"Thuraganur",dakale:"",vao:"PRAVEEN KUMAR M",gp:"Haadli"}, { sno:100,code:614743,name:"Attuvanahalli",dakale:"",vao:"SUDARSHAN KUMAR PS",gp:"Haadli"}, { sno:101,code:614744,name:"Alada Halli",dakale:"",vao:"PRAVEEN KUMAR M",gp:"Haadli"}, { sno:102,code:614745,name:"Gajanur",dakale:"Sunnadadoddi",vao:"MADEVI J",gp:"Nidaghatta"}, { sno:103,code:614746,name:"Voddarahalli",dakale:"1)Channegowdanadoddi 2)Annekoppalu",vao:"NATARAJ B",gp:"Marehalli"}, { sno:104,code:614747,name:"Marehalli",dakale:"1)Bosegowdanadoddi 2)Nagegowdanadoddi",vao:"NATARAJ B",gp:"Marehalli"}, { sno:105,code:614748,name:"Ravani",dakale:"Lakshmipuradoddi",vao:"MALLESH KP",gp:"Kyathnahalli"}, { sno:106,code:614749,name:"Devalinganapura",dakale:"",vao:"NATARAJ B",gp:"Marehalli"}, { sno:107,code:614750,name:"Savandipura",dakale:"",vao:"NARASAPPA",gp:"Nitturu"}, { sno:108,code:614751,name:"Sagyasaragur",dakale:"1)Honnemaradadoddi 2)Siddapura Kaloni",vao:"NARASAPPA",gp:"Nitturu"}, { sno:109,code:614752,name:"Nitturhalasahalli",dakale:"",vao:"NARASAPPA",gp:"Nitturu"}, { sno:110,code:614753,name:"Kunthur",dakale:"",vao:"NARASAPPA",gp:"Lingapatna"}, { sno:111,code:614754,name:"Lingapatna",dakale:"1)Naripura 2)Moogegowdanadoddi",vao:"SOMASHEKAR P",gp:"Lingapatna"}, { sno:112,code:614755,name:"Nittur",dakale:"1)N Hosadoddi 2)Kumbegowdanadoddi",vao:"SIDDARAYAMALI",gp:"Nitturu"}, { sno:113,code:658634,name:"B Hosuru",dakale:"",vao:"SIDDARAYAMALI",gp:"Nitturu"}, { sno:114,code:614756,name:"Ankanahalli",dakale:"Buyyanadoddi",vao:"SIDDARAYAMALI",gp:"Nitturu"}, { sno:115,code:614757,name:"Maragowdanahalli",dakale:"1)Kuntanadoddi 2)Heggodlu",vao:"SOMANNA",gp:"Thorekadanahalli"}, { sno:116,code:614758,name:"Nitthur Kodihalli",dakale:"",vao:"SOMANNA",gp:"Thorekadanahalli"}, { sno:117,code:614759,name:"Karadahalli",dakale:"",vao:"SIDDARAYAMALI",gp:"Lingapatna"}, { sno:118,code:614760,name:"Vodeyarabasapura",dakale:"Odubasappanadoddi",vao:"SOMANNA",gp:"Thorekadanahalli"}, { sno:119,code:614761,name:"Handanahalli",dakale:"",vao:"SOMANNA",gp:"Lingapatna"}, { sno:120,code:614762,name:"Kodipura",dakale:"",vao:"LATHA G",gp:"Thorekadanahalli"}, { sno:121,code:614763,name:"Veerajithimmanadoddi",dakale:"Vaddaradoddi",vao:"SOMASHEKAR P",gp:"Lingapatna"}, { sno:122,code:614764,name:"Juganahalli",dakale:"1)Doddegownadoddi 2)Benamanahalli",vao:"SOMASHEKAR P",gp:"Lingapatna"}, { sno:123,code:614765,name:"Balehonniga",dakale:"",vao:"SOMASHEKAR P",gp:"Dalavayikodihalli"}, { sno:124,code:614766,name:"Dalavaikodihalli",dakale:"",vao:"SOMASHEKAR P",gp:"Dalavayikodihalli"}, { sno:125,code:614767,name:"Deveerahalli",dakale:"",vao:"SOMASHEKAR P",gp:"Dalavayikodihalli"}, { sno:126,code:614768,name:"Kempainadoddi",dakale:"",vao:"SOMASHEKAR P",gp:"Dalavayikodihalli"}, { sno:127,code:614769,name:"Nandipura",dakale:"",vao:"SOMASHEKAR P",gp:"H Basavapura"}, { sno:128,code:614770,name:"Gundapura",dakale:"",vao:"LATHA G",gp:"H Basavapura"}, { sno:129,code:614771,name:"Hosapetebasavapura",dakale:"",vao:"LATHA G",gp:"H Basavapura"}, { sno:130,code:614772,name:"Hagadur",dakale:"",vao:"LATHA G",gp:"H Basavapura"}, { sno:131,code:614773,name:"Shivanahalli",dakale:"",vao:"LATHA G",gp:"H Basavapura"}, { sno:132,code:614774,name:"Gollarahalli",dakale:"",vao:"LATHA G",gp:"Bydarahalli"}, { sno:133,code:614775,name:"Halaguru",dakale:"1)Konnapura 2)Valageredoddi",vao:"SOMANNA",gp:"Halaguru"}, { sno:134,code:614776,name:"Halaganadoddi",dakale:"",vao:"LATHA G",gp:"Bydarahalli"}, { sno:135,code:614777,name:"Chillapura",dakale:"",vao:"LATHA G",gp:"Thorekadanahalli"}, { sno:136,code:614778,name:"Thorekadanahalli",dakale:"",vao:"BHASKAR S",gp:"Thorekadanahalli"}, { sno:137,code:614779,name:"Nanjapura",dakale:"",vao:"LATHA G",gp:"Bydarahalli"}, { sno:138,code:614780,name:"Chikkayelachagere",dakale:"",vao:"LATHA G",gp:"Bydarahalli"}, { sno:139,code:614781,name:"Halagapura",dakale:"",vao:"LATHA G",gp:"Thorekadanahalli"}, { sno:140,code:614782,name:"Doddayelachagere",dakale:"",vao:"LATHA G",gp:"Bydarahalli"}, { sno:141,code:614783,name:"Madahalli",dakale:"",vao:"LATHA G",gp:"Dugganahalli"}, { sno:142,code:614784,name:"Ganalu",dakale:"1)Masteradoddi 2)Kenchaboyidoddi 3)Kodlayyanadoddi 4)Beeruta 5)Konnapura Doddi 6)Tagadayyanadoddi 7)Ganagalu Hosadoddi 8)Karigowdanadoddi 9)Marijogidoddi 10)Beerappanadoddi 11)Guligowdanadoddi 12)Shakunidoddi 13)Byalamaradadoddi",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:143,code:614785,name:"Bydarahalli",dakale:"1)Krushnegowdanadoddi 2)Hosadoddi 3)Soligaradoddi",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:144,code:651365,name:"Karalakattedoddi",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:145,code:614786,name:"Muthalakatte",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:146,code:614787,name:"Solaba",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:147,code:614788,name:"Basavanahalli",dakale:"",vao:"SOMASHEKAR P",gp:"H Basavapura"}, { sno:148,code:614789,name:"Basavana Betta Forest",dakale:"",vao:"NARASAPPA",gp:"H Basavapura"}, { sno:149,code:614790,name:"Dalanakatte",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:150,code:614791,name:"Basavegowdanadoddi",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:151,code:614792,name:"Talavadi",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:152,code:614793,name:"Majjigemallanahatti",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:153,code:614794,name:"Muthathi",dakale:"",vao:"NARASAPPA",gp:"Bydarahalli"}, { sno:154,code:614795,name:"Doddaboovalli",dakale:"",vao:"RUKSAR FARHEEN",gp:"Kyathnahalli"}, { sno:155,code:614796,name:"Kyathanahalli",dakale:"",vao:"RUKSAR FARHEEN",gp:"Kyathnahalli"}, { sno:156,code:614797,name:"Kundur",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"Kundur"}, { sno:157,code:614798,name:"Shiramalli",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"Kundur"}, { sno:158,code:614799,name:"Pandithahalli",dakale:"",vao:"PRAVEEN T K",gp:"Pandithahalli"}, { sno:159,code:614800,name:"Bachanahalli",dakale:"",vao:"PRAVEEN T K",gp:"Pandithahalli"}, { sno:160,code:614801,name:"Manchanapura",dakale:"",vao:"MADHU M",gp:"Chottenahalli"}, { sno:161,code:614802,name:"Chottanahalli",dakale:"1)Kenchanadoddi 2)Chikkanadoddi",vao:"MADHU M",gp:"Chottenahalli"}, { sno:162,code:651318,name:"Kunanakoppalu",dakale:"",vao:"MADHU M",gp:"Chottenahalli"}, { sno:163,code:614803,name:"Chandahalli",dakale:"",vao:"MADHU M",gp:"Chottenahalli"}, { sno:164,code:651422,name:"Varadarajaswamydoddi",dakale:"",vao:"MADHU M",gp:"Chottenahalli"}, { sno:165,code:614804,name:"Dabbahalli",dakale:"",vao:"LAVANYA",gp:"Dhanaguru"}, { sno:166,code:614805,name:"Netkal",dakale:"Shimshapura",vao:"LAVANYA",gp:"Chottenahalli"}, { sno:167,code:614806,name:"Mallikyathanahalli",dakale:"Bluff(Shivanasamudra)",vao:"LANKESH H S",gp:"Hosahalli"}, { sno:168,code:614807,name:"Belakavadi",dakale:"1)Anthrayanapuradadoddi 2)Bannithalekoppalu",vao:"LANKESH H S",gp:"Belakavadi"}, { sno:169,code:651558,name:"Javaganahalli",dakale:"",vao:"LANKESH H S",gp:"Belakavadi"}, { sno:170,code:614808,name:"Kiragasur",dakale:"",vao:"LANKESH H S",gp:"Kaggalipura"}, { sno:171,code:614809,name:"Vasuvalli",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"Kaggalipura"}, { sno:172,code:614810,name:"Hokkarahalli",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"Kaggalipura"}, { sno:173,code:614811,name:"Nanjanayanapura",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"B.G.Pura"}, { sno:174,code:614812,name:"Dyavapatna",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"B.G.Pura"}, { sno:175,code:614813,name:"Hosahalli",dakale:"",vao:"PRAVEEN T K",gp:"Hosahalli"}, { sno:176,code:614814,name:"Hebbani",dakale:"",vao:"MADHU M",gp:"Pandithahalli"}, { sno:177,code:614815,name:"Manchanahalli",dakale:"",vao:"MADHU M",gp:"Pandithahalli"}, { sno:178,code:614816,name:"Dasanadoddi",dakale:"Hosadoddi",vao:"PRAVEEN T K",gp:"Pandithahalli"}, { sno:179,code:614817,name:"Kanchugahalli",dakale:"Narayanapura",vao:"SHRIKANTH KOTYAL",gp:"Kundur"}, { sno:180,code:614818,name:"Malagalali",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"Kundur"}, { sno:181,code:614819,name:"Thenkahalli",dakale:"",vao:"SHRIKANTH KOTYAL",gp:"Kundur"}, { sno:182,code:614820,name:"Kadabahalli",dakale:"Kalyanikoppalu",vao:"MADHU M",gp:"Sarguru"}, { sno:183,code:614821,name:"Mallinathapura",dakale:"",vao:"MADHU M",gp:"Kyathnahalli"}, { sno:184,code:614822,name:"Kaggala",dakale:"",vao:"MADHU M",gp:"Kyathnahalli"}, { sno:185,code:614823,name:"Kanikahalli",dakale:"",vao:"SRINIVASAMURTHY",gp:"Sarguru"}, { sno:186,code:614824,name:"Udape Boovalli",dakale:"",vao:"SRINIVASAMURTHY",gp:"Sarguru"}, { sno:187,code:614825,name:"Thigadahalli",dakale:"Konanakoppalu",vao:"SUBHASH",gp:"Kundur"}, { sno:188,code:614826,name:"Boppagowdanapura",dakale:"Utturu",vao:"SUDEEP KUMAR V",gp:"B.G.Pura"}, { sno:189,code:614827,name:"Muttanahalli",dakale:"",vao:"SUBHASH",gp:"B.G.Pura"}, { sno:190,code:614828,name:"Saraguru",dakale:"1)Ainorahundi 2)Halagattekoppalu 3)Agasaragoddi 4)Manchanakoppalu",vao:"SRINIVASAMURTHY",gp:"Sarguru"}, { sno:191,code:614829,name:"Hanavadi",dakale:"",vao:"SRINIVASAMURTHY",gp:"Sarguru"}, { sno:192,code:614830,name:"Purigali",dakale:"Akkamallanahundi",vao:"SANJAY K",gp:"Purigali"}, { sno:193,code:614831,name:"Hullamballi",dakale:"",vao:"SRINIVASMURTHY",gp:"Purigali"}, { sno:194,code:614832,name:"Chikka Abbagilu",dakale:"",vao:"SRINIVASMURTHY",gp:"Purigali"}, { sno:195,code:614833,name:"Chikkabagiluhanta",dakale:"",vao:"SANJAY K",gp:"Purigali"}, { sno:196,code:614834,name:"Maralahalli",dakale:"",vao:"SRINIVASMURTHY",gp:"Purigali"}, { sno:197,code:614835,name:"Ballagere",dakale:"",vao:"SANJAY K",gp:"Sarguru"}, { sno:198,code:614836,name:"Somanahalli",dakale:"Bilijagalimole",vao:"SANJAY K",gp:"Sarguru"}, { sno:199,code:614837,name:"Kodagahalli",dakale:"",vao:"SUBHASH",gp:"B.G.Pura"}, { sno:200,code:614838,name:"Haladasanahalli",dakale:"",vao:"SRINIVASAMURTHY",gp:"Kaggalipura"}, { sno:201,code:614839,name:"Kaggalipura",dakale:"",vao:"SRINIVASAMURTHY",gp:"Kaggalipura"}, { sno:202,code:651342,name:"Honaganahalli",dakale:"",vao:"SRINIVASAMURTHY",gp:"Kaggalipura"}
+/* 
+⚠ IMPORTANT:
+PASTE YOUR COMPLETE 202 VILLAGES ARRAY HERE
+(Your full list from previous message)
+*/
+];
+
+let currentRole="";
+let currentName="";
+
+function populateNames(){
+let role=document.getElementById("role").value;
+let names=[...new Set(RAW_VILLAGES.map(v=>role==="vao"?v.vao:v.gp))];
+let sel=document.getElementById("nameSelect");
+sel.innerHTML="";
+names.sort().forEach(n=>{
+let opt=document.createElement("option");
+opt.value=n;
+opt.innerText=n;
+sel.appendChild(opt);
+});
+}
+populateNames();
+document.getElementById("role").onchange=populateNames;
+
+function login(){
+let role=document.getElementById("role").value;
+let name=document.getElementById("nameSelect").value;
+let pwd=document.getElementById("password").value;
+
+if(pwd!==PASSWORD){
+document.getElementById("loginError").innerText="Incorrect password";
+return;
+}
+
+currentRole=role;
+currentName=name;
+
+document.getElementById("loginBox").style.display="none";
+document.getElementById("appBox").style.display="block";
+document.getElementById("userLabel").innerText=role.toUpperCase()+" : "+name;
+
+loadTable();
+}
+
+function logout(){location.reload();}
+
+function loadTable(){
+let tbody=document.getElementById("tableBody");
+tbody.innerHTML="";
+
+let rows=RAW_VILLAGES.filter(v=>currentRole==="vao"?v.vao===currentName:v.gp===currentName);
+
+rows.forEach((r,i)=>{
+let tr=document.createElement("tr");
+tr.innerHTML=`
+<td><div class="sno-b">${i+1}</div></td>
+<td>${r.code}</td>
+<td>${r.name}</td>
+<td><input class="ni" id="pop_${r.code}"></td>
+<td><input class="ni" id="hh_${r.code}"></td>
+<td>
+<button onclick="saveRow('${r.code}','${r.name}','${r.vao}','${r.gp}')">Save</button>
+<span id="status_${r.code}" class="sync"></span>
+</td>
+`;
+tbody.appendChild(tr);
+});
+}
+
+async function saveRow(code,villageName,vao,gp){
+
+let pop=document.getElementById("pop_"+code).value;
+let hh=document.getElementById("hh_"+code).value;
+let sheetUrl=document.getElementById("sheetUrl").value;
+
+if(!sheetUrl){
+alert("Paste Apps Script Web App URL first.");
+return;
+}
+
+document.getElementById("status_"+code).innerHTML="⏳";
+
+let payload={
+action:"upsertRow",
+rowId:currentRole+"_"+code,
+code:code,
+villageName:villageName,
+rowType:"village",
+dakaleGrama:"",
+vao:vao,
+gp:gp,
+popVAO:currentRole==="vao"?pop:"",
+hhVAO:currentRole==="vao"?hh:"",
+savedByVAO:currentRole==="vao"?currentName:"",
+vaoAt:currentRole==="vao"?new Date().toLocaleString("en-IN"):"",
+popSec:currentRole==="secretary"?pop:"",
+hhSec:currentRole==="secretary"?hh:"",
+savedBySec:currentRole==="secretary"?currentName:"",
+secAt:currentRole==="secretary"?new Date().toLocaleString("en-IN"):""
+};
+
+try{
+await fetch(sheetUrl,{
+method:"POST",
+mode:"no-cors",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(payload)
+});
+document.getElementById("status_"+code).innerHTML="✅";
+}catch(err){
+document.getElementById("status_"+code).innerHTML="❌";
+}
+}
+
+</script>
+
+</body>
+</html>
